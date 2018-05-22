@@ -7,6 +7,10 @@
 //========================================================//
 #include <stdio.h>
 #include "predictor.h"
+#include <vector>
+#include <map>
+
+using namespace std;
 
 //
 // TODO:Student Information
@@ -29,6 +33,9 @@ int pcIndexBits;  // Number of bits used for PC index
 int bpType;       // Branch Prediction Type
 int verbose;
 
+vector<int> ghistory;
+map<int, vector<int>> lhistory;
+
 //------------------------------------//
 //      Predictor Data Structures     //
 //------------------------------------//
@@ -37,6 +44,42 @@ int verbose;
 //TODO: Add your own Branch Predictor data structures here
 //
 
+
+void init_predictor_gshare() {
+
+}
+
+void init_predictor_tournament() {
+
+}
+
+void init_predictor_custom() {
+
+}
+
+uint8_t make_prediction_gshare(uint32_t pc) {
+
+}
+
+uint8_t make_prediction_tournament(uint32_t pc) {
+
+}
+
+uint8_t make_prediction_custom(uint32_t pc) {
+
+}
+
+void train_predictor_gshare(uint32_t pc, uint8_t outcome) {
+
+}
+
+void train_predictor_tournament(uint32_t pc, uint8_t outcome) {
+
+}
+
+void train_predictor_custom(uint32_t pc, uint8_t outcome) {
+
+}
 
 //------------------------------------//
 //        Predictor Functions         //
@@ -50,6 +93,18 @@ init_predictor()
   //
   //TODO: Initialize Branch Predictor Data Structures
   //
+  switch (bpType) {
+    case STATIC:
+      return;
+    case GSHARE:
+      return init_predictor_gshare();
+    case TOURNAMENT:
+      return init_predictor_tournament();
+    case CUSTOM:
+      return init_predictor_custom();
+    default:
+      break;
+  }
 }
 
 // Make a prediction for conditional branch instruction at PC 'pc'
@@ -68,8 +123,11 @@ make_prediction(uint32_t pc)
     case STATIC:
       return TAKEN;
     case GSHARE:
+      return make_prediction_gshare(pc);
     case TOURNAMENT:
+      return make_prediction_tournament(pc);
     case CUSTOM:
+      return make_prediction_custom(pc);
     default:
       break;
   }
@@ -88,4 +146,17 @@ train_predictor(uint32_t pc, uint8_t outcome)
   //
   //TODO: Implement Predictor training
   //
+  switch (bpType) {
+    case STATIC:
+      return;
+    case GSHARE:
+      return train_predictor_gshare(pc, outcome);
+    case TOURNAMENT:
+      return train_predictor_tournament(pc, outcome);
+    case CUSTOM:
+      return train_predictor_custom(pc, outcome);
+    default:
+      break;
+  }
 }
+
