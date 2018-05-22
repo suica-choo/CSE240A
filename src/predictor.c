@@ -7,7 +7,6 @@
 //========================================================//
 #include <stdio.h>
 #include "predictor.h"
-#include <vector>
 #include <map>
 
 using namespace std;
@@ -44,12 +43,12 @@ int verbose;
 
 uint32_t ghistory;
 map<uint32_t, uint32_t> lhistory;
-map<uint32_t, int> BHT;
+map<uint32_t, uint8_t> BHT;
 uint32_t ghistoryMask;
 
 void init_predictor_gshare() {
   for (int i = 0; i < ghistoryBits; i++)
-    mask
+    ghistoryMask = (ghistoryMask << 1) + 1;
 }
 
 void init_predictor_tournament() {
@@ -61,7 +60,16 @@ void init_predictor_custom() {
 }
 
 uint8_t make_prediction_gshare(uint32_t pc) {
-  uint32_t address = 
+  uint32_t address = (ghistoryMask & pc) ^ (ghistoryMask & ghistory);
+  if (BHT.find(address) != BHT.end()) {
+    uint8_t counters = BHT[address];
+    if (counters == SN || counters == WN)
+      return NOTTAKEN;
+    else
+      return TAKEN;
+  }
+  else
+    return NOTTAKEN;
 }
 
 uint8_t make_prediction_tournament(uint32_t pc) {
@@ -73,7 +81,31 @@ uint8_t make_prediction_custom(uint32_t pc) {
 }
 
 void train_predictor_gshare(uint32_t pc, uint8_t outcome) {
+  uint32_t address = (ghistoryMask & pc) ^ (ghistoryMask & ghistory);
+  if (BHT.find(address) == BHT.end()) {
+    BHT[address] = WN;
+  }
 
+  uint8_t counters = BHT[address];
+  if (outcome == TAKEN) {
+    if (counters == SN)
+      BHT[address] = WN;
+    else if (counters == WN)
+      BHT[address] = WT;
+    else if (counters == WT)
+      BHT[address] = ST;
+  }
+  else if (outcome == NOTTAKEN) {
+    if (counters == ST)
+      BHT[address] = WT;
+    else if (counters == WT)
+      BHT[address] = WN;
+    else if (counters == WN)
+      BHT[address] = SN;
+  }
+
+  ghistory <<= 1;
+  ghistory += outcome;
 }
 
 void train_predictor_tournament(uint32_t pc, uint8_t outcome) {
