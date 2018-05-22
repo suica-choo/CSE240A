@@ -33,8 +33,6 @@ int pcIndexBits;  // Number of bits used for PC index
 int bpType;       // Branch Prediction Type
 int verbose;
 
-vector<int> ghistory;
-map<int, vector<int>> lhistory;
 
 //------------------------------------//
 //      Predictor Data Structures     //
@@ -44,6 +42,9 @@ map<int, vector<int>> lhistory;
 //TODO: Add your own Branch Predictor data structures here
 //
 
+vector<int> ghistory;
+map<int, vector<int>> lhistory;
+map<int, int> BHT;
 
 void init_predictor_gshare() {
 
