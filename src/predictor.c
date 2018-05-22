@@ -42,9 +42,9 @@ int verbose;
 //TODO: Add your own Branch Predictor data structures here
 //
 
-vector<int> ghistory;
-map<int, vector<int>> lhistory;
-map<int, int> BHT;
+uint32_t ghistory;
+map<uint32_t, uint32_t> lhistory;
+map<uint32_t, int> BHT;
 
 void init_predictor_gshare() {
 
@@ -59,7 +59,7 @@ void init_predictor_custom() {
 }
 
 uint8_t make_prediction_gshare(uint32_t pc) {
-
+  int address = (0)
 }
 
 uint8_t make_prediction_tournament(uint32_t pc) {
