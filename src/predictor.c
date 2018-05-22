@@ -45,9 +45,11 @@ int verbose;
 uint32_t ghistory;
 map<uint32_t, uint32_t> lhistory;
 map<uint32_t, int> BHT;
+uint32_t ghistoryMask;
 
 void init_predictor_gshare() {
-
+  for (int i = 0; i < ghistoryBits; i++)
+    mask
 }
 
 void init_predictor_tournament() {
@@ -59,7 +61,7 @@ void init_predictor_custom() {
 }
 
 uint8_t make_prediction_gshare(uint32_t pc) {
-  int address = (0)
+  uint32_t address = 
 }
 
 uint8_t make_prediction_tournament(uint32_t pc) {
