@@ -42,13 +42,16 @@ int verbose;
 //
 
 uint32_t ghistory;
+uint32_t ghistory2; // used for tournament predictor
 map<uint32_t, uint32_t> lhistory;
 map<uint32_t, uint8_t> BHT;
 uint32_t ghistoryMask;
 uint32_t lhistoryMask;
 uint32_t pcIndexMask;
-map<uint32_t, uint8_t> selectors;
+map<uint32_t, uint8_t> localBHT;
 map<uint32_t, uint8_t> globalBHT;
+map<uint32_t, uint8_t> selectors; // used for selecting between local and global predictor
+map<uint32_t, uint8_t> customSelectors; // used for selecting between gshare and tournament predictor
 
 void init_predictor_gshare() {
   for (int i = 0; i < ghistoryBits; i++)
@@ -65,7 +68,10 @@ void init_predictor_tournament() {
 }
 
 void init_predictor_custom() {
-
+    ghistoryBits = 9;
+    lhistoryBits = 10;
+    pcIndexBits = 10;
+    init_predictor_tournament();
 }
 
 uint8_t make_prediction_gshare(uint32_t pc) {
@@ -82,14 +88,14 @@ uint8_t make_prediction_gshare(uint32_t pc) {
 }
 
 uint8_t make_prediction_tournament(uint32_t pc) {
-    uint32_t selectorAddress = ghistory & ghistoryMask;
+    uint32_t selectorAddress = ghistory2 & ghistoryMask;
     uint8_t selector = selectors.find(selectorAddress) == selectors.end() ? WT : selectors[selectorAddress];
     if(selector == WN || selector == SN){  // local predictor
         uint32_t address = (pc & pcIndexMask);
         uint32_t validLocalHistory = lhistory.find(address) == lhistory.end() ? 0 : lhistory[address];
         uint32_t localHistory = validLocalHistory & lhistoryMask;
-        if(BHT.find(localHistory) != BHT.end()){
-            uint8_t counter = BHT[localHistory];
+        if(localBHT.find(localHistory) != localBHT.end()){
+            uint8_t counter = localBHT[localHistory];
             if(counter == SN || counter == WN)
                 return NOTTAKEN;
             else
@@ -99,7 +105,7 @@ uint8_t make_prediction_tournament(uint32_t pc) {
             return NOTTAKEN;
     }
     else{ // global predictor
-        uint32_t globalHistory = ghistory & ghistoryMask;
+        uint32_t globalHistory = ghistory2 & ghistoryMask;
         if(globalBHT.find(globalHistory) != globalBHT.end()){
             uint8_t counter = globalBHT[globalHistory];
             if(counter == SN || counter == WN)
@@ -113,7 +119,14 @@ uint8_t make_prediction_tournament(uint32_t pc) {
 }
 
 uint8_t make_prediction_custom(uint32_t pc) {
-
+    uint32_t selectorAddress = ghistory & ghistoryMask;
+    uint8_t selector = customSelectors.find(selectorAddress) == customSelectors.end() ? WT : customSelectors[selectorAddress];
+    if(selector == WN || selector == SN){  // gshare predictor
+        return make_prediction_gshare(pc);
+    }
+    else{ // tournament predictor
+        return make_prediction_tournament(pc);
+    }
 }
 
 void train_predictor_gshare(uint32_t pc, uint8_t outcome) {
@@ -146,15 +159,16 @@ void train_predictor_gshare(uint32_t pc, uint8_t outcome) {
 
 void train_predictor_tournament(uint32_t pc, uint8_t outcome) {
     uint32_t address = pc & pcIndexMask;
-    uint32_t selectorAddress = ghistory & ghistoryMask;
+    uint32_t selectorAddress = ghistory2 & ghistoryMask;
+    // initialization
     if(lhistory.find(address) == lhistory.end()){
         lhistory[address] = 0;
     }
     uint32_t localHistory = lhistory[address] & lhistoryMask;
-    if(BHT.find(localHistory) == BHT.end()){
-        BHT[localHistory] = WN;
+    if(localBHT.find(localHistory) == localBHT.end()){
+        localBHT[localHistory] = WN;
     }
-    uint32_t globalHistory = ghistory & ghistoryMask;
+    uint32_t globalHistory = ghistory2 & ghistoryMask;
     if(globalBHT.find(globalHistory) == globalBHT.end()){
         globalBHT[globalHistory] = WN;
     }
@@ -163,7 +177,7 @@ void train_predictor_tournament(uint32_t pc, uint8_t outcome) {
     }
     
     // train the choose predictor
-    uint8_t localResult = BHT[localHistory] <= 1 ? NOTTAKEN : TAKEN;
+    uint8_t localResult = localBHT[localHistory] <= 1 ? NOTTAKEN : TAKEN;
     uint8_t globalResult = globalBHT[globalHistory] <= 1 ? NOTTAKEN : TAKEN;
     if(localResult != globalResult){
         if(localResult == outcome){
@@ -187,12 +201,12 @@ void train_predictor_tournament(uint32_t pc, uint8_t outcome) {
     // train the local predictor and the global predictor
     if(outcome == TAKEN){
         // local
-        if (BHT[localHistory] == SN)
-            BHT[localHistory] = WN;
-        else if (BHT[localHistory] == WN)
-            BHT[localHistory] = WT;
-        else if (BHT[localHistory] == WT)
-            BHT[localHistory] = ST;
+        if (localBHT[localHistory] == SN)
+            localBHT[localHistory] = WN;
+        else if (localBHT[localHistory] == WN)
+            localBHT[localHistory] = WT;
+        else if (localBHT[localHistory] == WT)
+            localBHT[localHistory] = ST;
         // global
         if (globalBHT[globalHistory] == SN)
             globalBHT[globalHistory] = WN;
@@ -203,12 +217,12 @@ void train_predictor_tournament(uint32_t pc, uint8_t outcome) {
     }
     else if(outcome == NOTTAKEN){
         // local
-        if (BHT[localHistory] == ST)
-            BHT[localHistory] = WT;
-        else if (BHT[localHistory] == WT)
-            BHT[localHistory] = WN;
-        else if (BHT[localHistory] == WN)
-            BHT[localHistory] = SN;
+        if (localBHT[localHistory] == ST)
+            localBHT[localHistory] = WT;
+        else if (localBHT[localHistory] == WT)
+            localBHT[localHistory] = WN;
+        else if (localBHT[localHistory] == WN)
+            localBHT[localHistory] = SN;
         // global
         if (globalBHT[globalHistory] == ST)
             globalBHT[globalHistory] = WT;
@@ -221,12 +235,40 @@ void train_predictor_tournament(uint32_t pc, uint8_t outcome) {
     // update local history and global history
     lhistory[address] <<= 1;
     lhistory[address] += outcome;
-    ghistory <<= 1;
-    ghistory += outcome;
+    ghistory2 <<= 1;
+    ghistory2 += outcome;
 }
 
 void train_predictor_custom(uint32_t pc, uint8_t outcome) {
-
+    uint32_t selectorAddress = ghistory & ghistoryMask;
+    if(customSelectors.find(selectorAddress) == customSelectors.end()){
+        customSelectors[selectorAddress] = WT;
+    }
+    
+    // train the selector
+    uint8_t gshareResult = make_prediction_gshare(pc);
+    uint8_t tournamentResult = make_prediction_tournament(pc);
+    if(gshareResult != tournamentResult){
+        if(gshareResult == outcome){
+            if (customSelectors[selectorAddress] == ST)
+                customSelectors[selectorAddress] = WT;
+            else if (customSelectors[selectorAddress] == WT)
+                customSelectors[selectorAddress] = WN;
+            else if (customSelectors[selectorAddress] == WN)
+                customSelectors[selectorAddress] = SN;
+        }
+        else{
+            if (customSelectors[selectorAddress] == SN)
+                customSelectors[selectorAddress] = WN;
+            else if (customSelectors[selectorAddress] == WN)
+                customSelectors[selectorAddress] = WT;
+            else if (customSelectors[selectorAddress] == WT)
+                customSelectors[selectorAddress] = ST;
+        }
+    }
+    // train two predictors
+    train_predictor_gshare(pc, outcome);
+    train_predictor_tournament(pc, outcome);
 }
 
 //------------------------------------//
